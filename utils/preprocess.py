@@ -2,35 +2,58 @@ import os
 from pydub import AudioSegment
 
 
-def mp4_to_mp3(input_path, output_name):
+def mp4_to_mp3(input_path, output_name, output_format="mp3"):
+    """
+    Converts an MP4 audio file to MP3 format.
+
+    :param input_path: str, Path to the input MP4 file.
+    :param output_name: str, Name of the output MP3 file (without extension).
+    :param output_format: str, Format of the output file.
+    """
     audio = AudioSegment.from_file(input_path, format="mp4")
-
-    # Define the output file path
-    output_file = f"{output_name}.mp3"
-
-    # Export as MP3
-    audio.export(output_file, format="mp3")
+    output_file = f"{output_name}.{output_format}"
+    audio.export(output_file, format=output_format)
     print(f"Exported {output_file}")
 
 
-def split_mp3(input_path, chunk_length, output_name):
-    audio = AudioSegment.from_file(input_path, format="mp3")
+def construct_output_file_path(directory, output_name, index, extension="mp3"):
+    """
+    Constructs the output file path based on the provided parameters.
 
-    # Define the length of each chunk (in milliseconds)
-    # chunk_length = 180 * 1000  # e.g., 180 seconds
+    :param directory: str, Target directory for the output file.
+    :param output_name: str, Base name of the output file.
+    :param index: int, Index of the chunk.
+    :param extension: str, Extension of the output file.
+    :return: str, Constructed output file path.
+    """
+    file_name = f"{output_name}_{index:02d}.{extension}"
+    return os.path.join(directory, file_name)
 
-    # Calculate the number of chunks
+
+def split_mp3(input_path, chunk_length, output_name, input_format="mp3"):
+    """
+    Splits an MP3 file into chunks of a specified length.
+
+    :param input_path: str, Path to the input MP3 file.
+    :param chunk_length: int, Length of each chunk in milliseconds.
+    :param output_name: str, Base name of the output chunks.
+    :param input_format: str, Format of the input file.
+    """
+    audio = AudioSegment.from_file(input_path, format=input_format)
     num_chunks = len(audio) // chunk_length + (1 if len(audio) % chunk_length else 0)
+    target_directory_name = os.path.splitext(os.path.basename(input_path))[0]
+    target_directory = os.path.join("./result", target_directory_name)
+    os.makedirs(target_directory, exist_ok=True)
 
-    # Split the audio and export each chunk
     for i in range(num_chunks):
         start_pos = i * chunk_length
-        end_pos = (i + 1) * chunk_length if i < num_chunks - 1 else len(audio)
+        end_pos = min((i + 1) * chunk_length, len(audio))
         chunk = audio[start_pos:end_pos]
-
-        # Construct the output file path
-        target_file_name = input_path.split("/")[-1][: -len(".mp3")]
-        os.makedirs(f"./result/{target_file_name}", exist_ok=True)
-        output_file = f"./result/{target_file_name}/{output_name}_{i}.mp3"
-        chunk.export(output_file, format="mp3")
+        output_file = construct_output_file_path(target_directory, output_name, i)
+        chunk.export(output_file, format=input_format)
         print(f"Exported {output_file}")
+
+
+# Example Usage:
+# mp4_to_mp3("path_to_mp4_file", "output_name")
+# split_mp3("path_to_mp3_file", 180000, "output_name")
